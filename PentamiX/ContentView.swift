@@ -1,24 +1,60 @@
-//
-//  ContentView.swift
-//  PentamiX
-//
-//  Created by Mauro Fusco on 23/09/2026.
-//
-
 import SwiftUI
+import Supabase
 
 struct ContentView: View {
+    @State private var currentRole: String? = nil
+    @State private var isCheckingRole = true
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        ZStack {
+            Theme.accademiaDark.ignoresSafeArea()
+            
+            if isCheckingRole {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: Theme.accademiaRed))
+                    .scaleEffect(1.5)
+            } else {
+                if currentRole == nil {
+                    LoginView(onLoginSuccess: { ruolo in
+                        currentRole = ruolo
+                    })
+                } else if currentRole == "Docente" {
+                    DocenteDashboardView(onLogout: {
+                        currentRole = nil
+                    })
+                } else {
+                    AlunnoDashboardView(onLogout: {
+                        currentRole = nil
+                    })
+                }
+            }
         }
-        .padding()
+        .task {
+            await checkSession()
+        }
     }
-}
-
-#Preview {
-    ContentView()
+    
+    func checkSession() async {
+        isCheckingRole = true
+        do {
+            let session = try await supabase.auth.session
+            let user = session.user
+            
+            let profili: [Utente] = try await supabase.from("utenti")
+                .select()
+                .eq("id", value: user.id.uuidString)
+                .execute()
+                .value
+            
+            if let profilo = profili.first, profilo.stato != "Inattivo" {
+                currentRole = profilo.ruolo
+            } else {
+                try? await supabase.auth.signOut()
+                currentRole = nil
+            }
+        } catch {
+            currentRole = nil
+        }
+        isCheckingRole = false
+    }
 }

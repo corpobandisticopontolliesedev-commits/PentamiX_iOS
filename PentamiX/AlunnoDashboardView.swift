@@ -62,8 +62,9 @@ struct AlunnoDashboardView: View {
             // Bottom Navigation Bar
             HStack {
                 TabBarItem(icon: "calendar", title: "Lezioni", isSelected: selectedTabIndex == 0) { selectedTabIndex = 0 }
-                TabBarItem(icon: "cart.fill", title: "Contabilità", isSelected: selectedTabIndex == 1) { selectedTabIndex = 1 }
-                TabBarItem(icon: "doc.text.fill", title: "Documenti", isSelected: selectedTabIndex == 2) { selectedTabIndex = 2 }
+                TabBarItem(icon: "eurosign.circle.fill", title: "Contabilità", isSelected: selectedTabIndex == 1) { selectedTabIndex = 1 }
+                // SEZIONE DISABILITATA PROVVISORIAMENTE
+                //TabBarItem(icon: "doc.text.fill", title: "Documenti", isSelected: selectedTabIndex == 2) { selectedTabIndex = 2 }
             }
             .padding(.vertical, 8)
             .background(Theme.accademiaCard)
@@ -85,8 +86,7 @@ struct AlunnoDashboardView: View {
     func fetchProfilo() async {
         do {
             let user = try await supabase.auth.session.user
-            let profili: [UtenteLoggato] = try await supabase.database
-                .from("utenti")
+            let profili: [UtenteLoggato] = try await supabase.from("utenti")
                 .select("id_collegato")
                 .eq("id", value: user.id.uuidString)
                 .execute()
@@ -94,8 +94,7 @@ struct AlunnoDashboardView: View {
             
             if let idColl = profili.first?.id_collegato {
                 self.idCollegato = idColl
-                let datiAlunno: [AlunnoProfilo] = try await supabase.database
-                    .from("alunni")
+                let datiAlunno: [AlunnoProfilo] = try await supabase.from("alunni")
                     .select("data_nascita, anno_scheda_firmata, anno_liberatoria_firmata")
                     .eq("id", value: idColl)
                     .execute()
@@ -108,8 +107,6 @@ struct AlunnoDashboardView: View {
         loadingProfilo = false
     }
 }
-
-// Viste interne
 
 struct LezioniAlunnoView: View {
     let alunnoId: String
@@ -181,8 +178,7 @@ struct LezioniAlunnoView: View {
         let today = formatter.string(from: Date())
         
         do {
-            let result: [LezioneDB] = try await supabase.database
-                .from("registro")
+            let result: [LezioneDB] = try await supabase.from("registro")
                 .select("id, data_lezione, ora_inizio, stato_lezione, tipi_lezioni(tipo), docenti(nome, cognome)")
                 .eq("alunno_id", value: alunnoId)
                 .gte("data_lezione", value: today)
@@ -190,7 +186,6 @@ struct LezioniAlunnoView: View {
                 .execute()
                 .value
             
-            // Ordinamento
             self.lezioni = result.sorted { ($0.data_lezione + $0.ora_inizio) < ($1.data_lezione + $1.ora_inizio) }
         } catch {
             print("Errore fetch lezioni: \(error)")
@@ -386,7 +381,6 @@ struct DocumentSectionView: View {
     }
 }
 
-// Elemento della Custom Tab Bar
 struct TabBarItem: View {
     let icon: String
     let title: String
